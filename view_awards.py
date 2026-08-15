@@ -20,6 +20,13 @@ def _award_row_count(team):
     return total or 1
 
 
+def build_header(group, font, width):
+    """Column labels for the fixed (non-scrolling) header bar."""
+    row_h = font_row_height(font)
+    for label_text, x in (("Team", _TEAM_COL_X), ("Event", _EVENT_COL_X), ("Award", _AWARD_COL_X)):
+        group.append(make_label(font, label_text, ui_theme.TEXT_SECONDARY, x, row_h // 2))
+
+
 def build(group, data, font, width):
     row_h = font_row_height(font)
     y = 0
@@ -33,11 +40,6 @@ def build(group, data, font, width):
 
         group.append(make_rect(width, row_h, ui_theme.GROUP_HEADER_BG, 0, y))
         group.append(make_label(font, program, accent, 10, y + row_h // 2))
-        y += row_h
-
-        group.append(make_rect(width, row_h, ui_theme.COLUMN_HEADER_BG, 0, y))
-        for label_text, x in (("Team", _TEAM_COL_X), ("Event", _EVENT_COL_X), ("Award", _AWARD_COL_X)):
-            group.append(make_label(font, label_text, ui_theme.TEXT_SECONDARY, x, y + row_h // 2))
         y += row_h
 
         for team in teams:

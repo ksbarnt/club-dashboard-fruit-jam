@@ -70,7 +70,22 @@ def main():
 
     display = init_display(config.display_width, config.display_height)
     ui = DashboardUI(display, config)
+
+    def set_view_header(view):
+        """Column labels for the fixed header bar -- separate from
+        refresh_view() since they don't depend on fetched data, only on
+        which view is showing (and, for World Skills, the event region)."""
+        if view == "active":
+            ui.set_table_header(lambda g: view_active.build_header(g, ui.font, ui.width))
+        elif view == "world_skills":
+            ui.set_table_header(
+                lambda g: view_world_skills.build_header(g, ui.font, ui.width, config.event_region)
+            )
+        else:
+            ui.set_table_header(lambda g: view_awards.build_header(g, ui.font, ui.width))
+
     ui.set_active_view("active")
+    set_view_header("active")
     ui.set_status("Connecting to WiFi...")
 
     esp = connect_wifi(config.wifi_ssid, config.wifi_password)
@@ -123,6 +138,7 @@ def main():
         gc.collect()
 
     ui.set_active_view(current_view)
+    set_view_header(current_view)
     refresh_view(current_view)
 
     last_button_states = [False, False, False]
@@ -138,6 +154,7 @@ def main():
                 last_press_time[i] = now
                 current_view = view
                 ui.set_active_view(current_view)
+                set_view_header(current_view)
                 refresh_view(current_view)
             last_button_states[i] = states[i]
 

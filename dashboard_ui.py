@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MIT
 """The dashboard's fixed screen shell: background, header (title + clock),
-footer (view legend + status line), and the auto-scrolling content area
-the three views render into.
+a fixed column-header bar, footer (view legend + status line), and the
+auto-scrolling content area the three views render into. Only that last
+area scrolls -- column headers stay put via ``set_table_header()``.
 """
 
 import displayio
@@ -33,16 +34,28 @@ class DashboardUI(object):
 
         self.header_height = font_row_height(self.font, padding=12)
         self.footer_height = font_row_height(self.font, padding=12)
-        self.viewport_height = self.height - self.header_height - self.footer_height
+        # Column labels ("#", "Rank", ...) are identical across every
+        # section within a view, so they're drawn once in a fixed bar
+        # rather than repeated per section inside the scrolling content --
+        # that's also what keeps them from scrolling along with the data.
+        self.row_height = font_row_height(self.font)
+        self.table_header_height = self.row_height
+        self.viewport_height = (
+            self.height - self.header_height - self.table_header_height - self.footer_height
+        )
 
         self.root = displayio.Group()
         self.root.append(make_rect(self.width, self.height, ui_theme.SURFACE))
 
+        # Steps SCROLL_STEP_LINES worth of table rows every scroll_delay
+        # seconds -- the pixel step is computed here (not in config.py)
+        # since only this layer knows the actual on-screen row height.
+        step_px = max(1, config.scroll_step_lines) * self.row_height
         self.scroll = ScrollArea(
             0,
-            self.header_height,
+            self.header_height + self.table_header_height,
             self.viewport_height,
-            step=config.scroll_step,
+            step=step_px,
             delay=config.scroll_delay,
             pause=config.scroll_pause,
         )
@@ -50,6 +63,7 @@ class DashboardUI(object):
 
         self.nav_labels = {}
         self._build_header()
+        self._build_table_header()
         self._build_footer()
 
         display.root_group = self.root
@@ -71,6 +85,13 @@ class DashboardUI(object):
         )
         group.append(self.clock_label)
         self.root.append(group)
+
+    def _build_table_header(self):
+        self.table_header_group = displayio.Group(x=0, y=self.header_height)
+        self.table_header_group.append(
+            make_rect(self.width, self.table_header_height, ui_theme.COLUMN_HEADER_BG)
+        )
+        self.root.append(self.table_header_group)
 
     def _build_footer(self):
         group = displayio.Group()
@@ -105,8 +126,18 @@ class DashboardUI(object):
     def set_status(self, text):
         self.status_label.text = text or ""
 
+    def set_table_header(self, build_header):
+        """Replace the fixed column-label row. ``build_header(parent_group)``
+        -- unlike ``render()``, this row never scrolls."""
+        group = self.table_header_group
+        while len(group) > 1:  # keep the background rect (index 0)
+            group.pop()
+        build_header(group)
+
     def render(self, build_content):
-        """``build_content(parent_group) -> content_height_px``"""
+        """``build_content(parent_group) -> content_height_px``. Only this
+        (the table body) scrolls -- column headers live in the fixed bar
+        set via ``set_table_header()``."""
         self.scroll.set_content(build_content)
 
     def tick(self):

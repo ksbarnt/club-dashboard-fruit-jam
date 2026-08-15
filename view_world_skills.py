@@ -5,11 +5,14 @@ regional rank -- mirrors the desktop app's World Skills Dashboard.
 """
 
 import ui_theme
-from ui_widgets import font_row_height, make_label, make_rect
+from ui_widgets import fit_text, font_row_height, make_label, make_rect
 
+# ("#", 70) is fixed; the regional-rank column's label is filled in at
+# render time from the configured event region (e.g. "Michigan Rk").
+_REGION_COL_WIDTH = 100
 _COLUMNS = [
     ("#", 70),
-    ("Region Rk", 100),
+    (None, _REGION_COL_WIDTH),
     ("World Rk", 100),
     ("Overall", 90),
     ("Driver", 90),
@@ -24,6 +27,24 @@ _GROUP_TITLES = {
 }
 
 
+def _region_rank_label(event_region, font):
+    label_text = "%s Rk" % event_region if event_region else "Region Rk"
+    return fit_text(label_text, font, _REGION_COL_WIDTH - 6)
+
+
+def build_header(group, font, width, event_region):
+    """Column labels for the fixed (non-scrolling) header bar. The
+    regional-rank column is labeled with the club's configured event
+    region, e.g. "Michigan Rk", instead of a generic "Region Rk"."""
+    row_h = font_row_height(font)
+    x = 10
+    for label_text, col_w in _COLUMNS:
+        if label_text is None:
+            label_text = _region_rank_label(event_region, font)
+        group.append(make_label(font, label_text, ui_theme.TEXT_SECONDARY, x, row_h // 2))
+        x += col_w
+
+
 def build(group, data, font, width):
     row_h = font_row_height(font)
     y = 0
@@ -35,13 +56,6 @@ def build(group, data, font, width):
 
         group.append(make_rect(width, row_h, ui_theme.GROUP_HEADER_BG, 0, y))
         group.append(make_label(font, title, accent, 10, y + row_h // 2))
-        y += row_h
-
-        group.append(make_rect(width, row_h, ui_theme.COLUMN_HEADER_BG, 0, y))
-        x = 10
-        for label_text, col_w in _COLUMNS:
-            group.append(make_label(font, label_text, ui_theme.TEXT_SECONDARY, x, y + row_h // 2))
-            x += col_w
         y += row_h
 
         for team in grp.get("teams") or []:

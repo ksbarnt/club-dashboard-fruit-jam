@@ -12,8 +12,8 @@ triplets and parsed here.
 import os
 
 DEFAULT_REFRESH_INTERVAL = 300
-DEFAULT_SCROLL_STEP = 1
-DEFAULT_SCROLL_DELAY = 0.04
+DEFAULT_SCROLL_STEP_LINES = 1
+DEFAULT_SCROLL_DELAY = 2.0
 DEFAULT_SCROLL_PAUSE = 2.0
 DEFAULT_DISPLAY_WIDTH = 640
 DEFAULT_DISPLAY_HEIGHT = 480
@@ -114,7 +114,7 @@ class Config(object):
 
         self.tz_offset_hours = _get_float("TZ_OFFSET_HOURS", 0)
         self.refresh_interval = _get_float("REFRESH_INTERVAL_SECONDS", DEFAULT_REFRESH_INTERVAL)
-        self.scroll_step = _get_int("SCROLL_STEP_PIXELS", DEFAULT_SCROLL_STEP)
+        self.scroll_step_lines = _get_int("SCROLL_STEP_LINES", DEFAULT_SCROLL_STEP_LINES)
         self.scroll_delay = _get_float("SCROLL_DELAY_SECONDS", DEFAULT_SCROLL_DELAY)
         self.scroll_pause = _get_float("SCROLL_PAUSE_SECONDS", DEFAULT_SCROLL_PAUSE)
         self.display_width = _get_int("DISPLAY_WIDTH", DEFAULT_DISPLAY_WIDTH)

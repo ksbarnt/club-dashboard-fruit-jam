@@ -74,7 +74,7 @@ hardware.py          picodvi display + button setup
 vex_wifi.py          ESP32-C6 WiFi bring-up, HTTP session, NTP time sync
 vex_data.py          Fetches + shapes data for the three dashboards
 json_stream.py        Streaming JSON parser (see "World Skills memory use" below)
-dashboard_ui.py       Screen shell: background, header, footer, scroll area
+dashboard_ui.py       Screen shell: header, fixed column-header bar, footer, scroll area
 ui_theme.py           Color palette
 ui_widgets.py         Label/rect helpers + the auto-scroll engine
 view_active.py         Active Today table renderer

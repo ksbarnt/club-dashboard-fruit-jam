@@ -51,11 +51,12 @@ TZ_OFFSET_HOURS = -6
 # How often the currently displayed view refreshes itself, in seconds.
 REFRESH_INTERVAL_SECONDS = 300
 
-# Auto-scroll speed for tables taller than the screen: SCROLL_STEP_PIXELS
-# moved every SCROLL_DELAY_SECONDS, pausing SCROLL_PAUSE_SECONDS at the
-# top and bottom of each pass.
-SCROLL_STEP_PIXELS = 1
-SCROLL_DELAY_SECONDS = 0.04
+# Auto-scroll speed for tables taller than the screen: SCROLL_STEP_LINES
+# worth of table rows moved every SCROLL_DELAY_SECONDS, pausing
+# SCROLL_PAUSE_SECONDS at the top and bottom of each pass. The defaults
+# below scroll one line every 2 seconds.
+SCROLL_STEP_LINES = 1
+SCROLL_DELAY_SECONDS = 2.0
 SCROLL_PAUSE_SECONDS = 2.0
 
 # Display resolution. Must be one of: 320x240, 360x200, 640x480, 720x400.

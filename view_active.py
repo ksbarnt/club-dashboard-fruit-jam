@@ -23,6 +23,15 @@ def _score_cell(score, attempts):
     return "%s (%s/3)" % (score_txt, attempts_txt)
 
 
+def build_header(group, font, width):
+    """Column labels for the fixed (non-scrolling) header bar."""
+    row_h = font_row_height(font)
+    x = 10
+    for label_text, col_w in _COLUMNS:
+        group.append(make_label(font, label_text, ui_theme.TEXT_SECONDARY, x, row_h // 2))
+        x += col_w
+
+
 def build(group, data, font, width):
     row_h = font_row_height(font)
     y = 0
@@ -35,13 +44,6 @@ def build(group, data, font, width):
 
         group.append(make_rect(width, row_h, ui_theme.GROUP_HEADER_BG, 0, y))
         group.append(make_label(font, program, accent, 10, y + row_h // 2))
-        y += row_h
-
-        group.append(make_rect(width, row_h, ui_theme.COLUMN_HEADER_BG, 0, y))
-        x = 10
-        for label_text, col_w in _COLUMNS:
-            group.append(make_label(font, label_text, ui_theme.TEXT_SECONDARY, x, y + row_h // 2))
-            x += col_w
         y += row_h
 
         for event_group in event_groups:
