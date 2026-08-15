@@ -55,8 +55,8 @@ def fit_text(text, font, max_width_px):
 class ScrollArea(object):
     """A displayio Group that auto-scrolls its contents vertically when
     they're taller than the viewport: pause at the top, scroll down slowly,
-    pause at the bottom, scroll back up, repeat. No-ops (stays put) when
-    everything already fits.
+    pause at the bottom, then loop back to the top (rather than scrolling
+    back up) and repeat. No-ops (stays put) when everything already fits.
     """
 
     def __init__(self, x, y, viewport_height, step=1, delay=0.04, pause=2.0):
@@ -68,7 +68,6 @@ class ScrollArea(object):
         self._pause = pause
         self._content_height = 0
         self._offset = 0
-        self._direction = 1
         self._pause_until = None
         self._last_tick = time.monotonic()
 
@@ -82,7 +81,6 @@ class ScrollArea(object):
             self.group.pop()
         self._content_height = build(self.group)
         self._offset = 0
-        self._direction = 1
         self.group.y = self._origin_y
         now = time.monotonic()
         self._pause_until = now + self._pause
@@ -101,18 +99,19 @@ class ScrollArea(object):
                 return
             self._pause_until = None
             self._last_tick = now
+            if self._offset >= max_scroll:
+                # The bottom-of-pass pause just ended -- loop back to the
+                # top and pause there too, rather than scrolling back up.
+                self._offset = 0
+                self.group.y = self._origin_y
+                self._pause_until = now + self._pause
             return
         if now - self._last_tick < self._delay:
             return
         self._last_tick = now
 
-        self._offset += self._step * self._direction
+        self._offset += self._step
         if self._offset >= max_scroll:
             self._offset = max_scroll
-            self._direction = -1
-            self._pause_until = now + self._pause
-        elif self._offset <= 0:
-            self._offset = 0
-            self._direction = 1
             self._pause_until = now + self._pause
         self.group.y = self._origin_y - self._offset
