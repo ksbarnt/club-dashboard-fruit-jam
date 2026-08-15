@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: MIT
-"""Fruit Jam display (DVI/HDMI via HSTX + picodvi) and button setup."""
+"""Fruit Jam display (DVI/HDMI via HSTX + picodvi), button, and SD card setup."""
 
 import board
+import busio
 import displayio
 import framebufferio
 import picodvi
+import storage
 import supervisor
 from digitalio import DigitalInOut, Direction, Pull
 
@@ -39,6 +41,28 @@ def init_display(width=640, height=480, color_depth=8):
     display = framebufferio.FramebufferDisplay(fb, auto_refresh=True)
     supervisor.runtime.display = display
     return display
+
+
+def mount_sd_card(mount_point="/sd"):
+    """Mount the Fruit Jam's SD card slot, if a card is present.
+
+    Returns True if the card is now mounted at ``mount_point``, False if
+    there's no card (or mounting otherwise failed) -- callers that use
+    the card for optional persistence (see ``vex_cache.py``) should treat
+    False as "run without a cache", not a fatal error.
+    """
+    try:
+        cs = DigitalInOut(board.SD_CS)
+        spi = busio.SPI(board.SD_SCK, board.SD_MOSI, board.SD_MISO)
+        import adafruit_sdcard
+
+        sdcard = adafruit_sdcard.SDCard(spi, cs)
+        vfs = storage.VfsFat(sdcard)
+        storage.mount(vfs, mount_point)
+        return True
+    except OSError as exc:
+        print("No SD card mounted at %s: %s" % (mount_point, exc))
+        return False
 
 
 class Buttons(object):

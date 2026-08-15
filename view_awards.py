@@ -15,9 +15,15 @@ _EVENT_COL_X = 100
 _AWARD_COL_X = 300
 
 
-def _award_row_count(team):
-    total = sum(len(event.get("awards") or []) for event in team.get("events") or [])
-    return total or 1
+def _team_block_height(team, row_h):
+    """Pixel height of a team's whole block: one row per award (or one
+    placeholder row for an event with none), plus a 1px border between
+    each event -- kept in sync with the dividers build() actually draws
+    so the merged team-number cell centers correctly."""
+    events = team.get("events") or []
+    total_rows = sum(len(event.get("awards") or []) or 1 for event in events) or 1
+    dividers = max(0, len(events) - 1)
+    return total_rows * row_h + dividers
 
 
 def build_header(group, font, width):
@@ -44,9 +50,11 @@ def build(group, data, font, width):
 
         for team in teams:
             team_block_top = y
-            team_block_height = _award_row_count(team) * row_h
+            team_block_height = _team_block_height(team, row_h)
 
-            for event in team.get("events") or []:
+            events = team.get("events") or []
+            last_index = len(events) - 1
+            for idx, event in enumerate(events):
                 awards = event.get("awards") or [{"title": "(award)"}]
                 event_block_top = y
 
@@ -70,6 +78,15 @@ def build(group, data, font, width):
                         event_block_top + event_block_height // 2,
                     )
                 )
+
+                # Border line between events within a team -- stops short of
+                # the Team column so it doesn't cut through the merged
+                # team-number cell, which spans every event below it.
+                if idx != last_index:
+                    group.append(
+                        make_rect(width - _EVENT_COL_X, 1, ui_theme.GROUP_HEADER_BG, _EVENT_COL_X, y)
+                    )
+                    y += 1
 
             number_text = fit_text(team.get("number"), font, _EVENT_COL_X - _TEAM_COL_X - 10)
             group.append(

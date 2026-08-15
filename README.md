@@ -15,6 +15,10 @@ to `settings.toml` and fill it in, and reset.
 - Adafruit Fruit Jam (RP2350B, ESP32-C6 WiFi co-processor, HSTX DVI output).
 - An HDMI/DVI monitor or TV, connected via the Fruit Jam's DVI port.
 - A USB-C power supply for the Fruit Jam.
+- Optional: a microSD card in the Fruit Jam's SD slot, for World
+  Skills/Awards caching (see "Once-a-day caching" below). The dashboard
+  runs fine without one -- it just refetches that data every time it's
+  viewed instead of at most once a day.
 
 ## Buttons
 
@@ -24,10 +28,13 @@ to `settings.toml` and fill it in, and reset.
 | 2 | World Skills -- world skills rankings for tracked teams |
 | 3 | Awards -- awards won this season, by program |
 
-The current view refreshes automatically every `REFRESH_INTERVAL_SECONDS`
-(5 minutes by default) and whenever you switch to it. Tables taller than
-the screen scroll slowly on their own, pausing at the top and bottom of
-each pass.
+Active Today refreshes automatically every `REFRESH_INTERVAL_SECONDS` (5
+minutes by default). World Skills and Awards are refetched at most once
+per local calendar day instead -- see "Once-a-day caching" below --
+checked whenever you switch to either view. Tables taller than the
+screen scroll slowly on their own (one line every `SCROLL_DELAY_SECONDS`
+by default), pausing `SCROLL_PAUSE_SECONDS` at the top and bottom of
+each pass; column headers stay fixed while only the table body scrolls.
 
 ## Install
 
@@ -70,9 +77,10 @@ reference. In short:
 ```
 code.py              Entry point: boot sequence + main loop
 config.py            settings.toml -> validated Config object
-hardware.py          picodvi display + button setup
+hardware.py          picodvi display, button, and SD card setup
 vex_wifi.py          ESP32-C6 WiFi bring-up, HTTP session, NTP time sync
 vex_data.py          Fetches + shapes data for the three dashboards
+vex_cache.py          SD card cache for once-a-day World Skills/Awards data
 json_stream.py        Streaming JSON parser (see "World Skills memory use" below)
 dashboard_ui.py       Screen shell: header, fixed column-header bar, footer, scroll area
 ui_theme.py           Color palette
@@ -96,6 +104,21 @@ board is holding in RAM. `vex_data.py` streams that response through
 arrive, computing each one's regional rank from a running counter in the
 same pass, rather than ever materializing the full list.
 
+## Once-a-day caching
+
+World Skills and Awards each mean walking the whole roster for every
+tracked team -- by far the most network/CPU work an update of this
+dashboard does, and data that only meaningfully changes a few times a
+season. Rather than refetching on the same timer as Active Today, each
+is fetched at most once per local calendar day: the first time you
+switch to that view each day it fetches and saves a copy to the SD card
+(`/sd/world_skills_cache.json`, `/sd/awards_cache.json`) along with the
+time it was fetched; switching to that view again the same day -- even
+after a reboot -- reuses that copy instead of hitting the network again.
+Without an SD card, this still works within a single boot (kept in
+memory), it just can't survive a reboot, so it refetches once after
+power-up.
+
 ## Libraries
 
 `lib/` vendors everything this project depends on, each under its
@@ -109,6 +132,7 @@ original MIT license (see the SPDX header at the top of each file):
   the WiFi radio.
 - `adafruit_ntp` -- clock sync.
 - `adafruit_display_text` -- on-screen text labels.
+- `adafruit_sdcard` -- SD card driver, for World Skills/Awards caching.
 
 ## Troubleshooting
 
@@ -123,6 +147,10 @@ original MIT license (see the SPDX header at the top of each file):
 - **A team never shows up**: the status bar surfaces "number not found"
   warnings -- check the team number and program in `TEAMS` match what
   events.vex.com has on record.
+- **World Skills/Awards look stale**: they only refetch once per local
+  calendar day (see "Once-a-day caching"). Delete
+  `/sd/world_skills_cache.json` / `/sd/awards_cache.json` from the SD
+  card (or just switch views on a new day) to force a refetch.
 - Serial console output (`code.py`'s `print()` calls) is visible over USB
   in a serial terminal or the Mu editor's REPL if you need more detail
   than the on-screen status bar shows.
