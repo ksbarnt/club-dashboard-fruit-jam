@@ -1,0 +1,16 @@
+# Local secrets -- copy settings.toml.example to settings.toml and fill
+# in your own WiFi credentials / API token. Never commit settings.toml.
+settings.toml
+
+# CircuitPython device-generated files
+boot_out.txt
+.fseventsd/
+.Trashes/
+.metadata_never_index
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc

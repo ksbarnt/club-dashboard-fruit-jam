@@ -1,0 +1,63 @@
+# Club Dashboard configuration.
+#
+# CircuitPython reads this file automatically at boot -- no code changes
+# needed to reconfigure the dashboard, just edit this file and reset the
+# board (or save it again from the CIRCUITPY drive, which triggers a
+# reload). Copy this file to settings.toml and replace every placeholder
+# value below before use -- settings.toml itself is gitignored since it
+# holds your WiFi password and API token.
+
+# --- WiFi ---
+# The Fruit Jam's ESP32-C6 co-processor joins this network at boot.
+CIRCUITPY_WIFI_SSID = "your-wifi-ssid"
+CIRCUITPY_WIFI_PASSWORD = "your-wifi-password"
+
+# --- VEX Events API ---
+# A bearer token (JWT) from your events.vex.com account: My Account ->
+# Developer / API Settings -> Generate Token.
+VEX_API_TOKEN = "your-vex-events-api-token"
+
+# --- Club settings (mirrors the desktop app's Settings view) ---
+
+# The event region used for the World Skills dashboard's regional
+# ranking column. Must exactly match one of the regions events.vex.com
+# uses, e.g. "Texas - Region 1", "California - North", "Ontario",
+# "United Kingdom". See the desktop app's Settings view for the full list.
+EVENT_REGION = "Texas - Region 1"
+
+# Season ids from events.vex.com for each program (find them via the
+# desktop app's Settings view, or GET /seasons?program=VIQRC|V5RC on the
+# API). Leave a program at 0 if you have no teams in that program -- at
+# least one of the two must be set.
+VIQRC_SEASON_ID = 0
+V5RC_SEASON_ID = 0
+
+# Teams to track, as comma-separated "number:program:grade" triplets.
+#   program is VIQRC or V5RC.
+#   grade is ES or MS for VIQRC, MS or HS for V5RC.
+# There's no limit on how many teams you list here.
+# Example: "1234A:V5RC:HS,5678B:VIQRC:MS,9012C:VIQRC:ES"
+TEAMS = "1234A:V5RC:HS,5678B:VIQRC:MS"
+
+# --- Local time ---
+# CircuitPython has no timezone database, so the dashboard's "today" (for
+# the Active Today view) is computed from a fixed hour offset from UTC.
+# Examples: US Eastern standard -5, US Central standard -6, US Mountain
+# standard -7, US Pacific standard -8 (add 1 during daylight saving).
+TZ_OFFSET_HOURS = -6
+
+# --- Behavior tuning (all optional -- shown values are the defaults) ---
+
+# How often the currently displayed view refreshes itself, in seconds.
+REFRESH_INTERVAL_SECONDS = 300
+
+# Auto-scroll speed for tables taller than the screen: SCROLL_STEP_PIXELS
+# moved every SCROLL_DELAY_SECONDS, pausing SCROLL_PAUSE_SECONDS at the
+# top and bottom of each pass.
+SCROLL_STEP_PIXELS = 1
+SCROLL_DELAY_SECONDS = 0.04
+SCROLL_PAUSE_SECONDS = 2.0
+
+# Display resolution. Must be one of: 320x240, 360x200, 640x480, 720x400.
+DISPLAY_WIDTH = 640
+DISPLAY_HEIGHT = 480
