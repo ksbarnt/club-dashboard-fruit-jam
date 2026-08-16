@@ -3,8 +3,10 @@
 A CircuitPython dashboard for the [Adafruit Fruit Jam](https://www.adafruit.com/product/6200)
 that mirrors the [desktop club dashboard app](../club-dashboard-desktop)'s three
 views -- Active Today, World Skills, and Awards -- for a club/organization's
-VEX teams throughout a competition season, driven straight from
-events.vex.com via [`cpvexevents`](https://github.com/ksbarnt/cpvexevents).
+VEX teams throughout a competition season, driven from a
+[club-dashboard-web](../club-dashboard-web) deployment's cached
+`/api/external/*` data (itself fetched from events.vex.com server-side --
+this device never talks to VEX directly).
 
 Everything needed to run is in this folder: copy it onto the Fruit Jam's
 `CIRCUITPY` drive as-is (see Install below), copy `settings.toml.example`
@@ -46,10 +48,10 @@ each pass; column headers stay fixed while only the table body scrolls.
    third-party library this project needs (see below); nothing else to
    install with `circup` or `mip`.
 3. Copy `settings.toml.example` to `settings.toml` on the `CIRCUITPY`
-   drive and fill it in: WiFi credentials, your VEX Events API token,
-   event region, season ids, and the list of teams to track. Every
-   setting is documented inline in that file. `settings.toml` holds
-   secrets, so it's gitignored -- only the `.example` is committed.
+   drive and fill it in: WiFi credentials, your club-dashboard-web URL
+   and API key, and the (cosmetic) event region label. Every setting is
+   documented inline in that file. `settings.toml` holds secrets, so
+   it's gitignored -- only the `.example` is committed.
 4. The board reloads automatically when `settings.toml` (or any other
    file) is saved. On first boot with valid settings it connects to
    WiFi, syncs the clock over NTP, and shows the Active Today view.
@@ -61,12 +63,16 @@ All configuration lives in `settings.toml` (copied from
 reference. In short:
 
 - `CIRCUITPY_WIFI_SSID` / `CIRCUITPY_WIFI_PASSWORD` -- your network.
-- `VEX_API_TOKEN` -- a bearer token from your events.vex.com account
-  (My Account -> Developer / API Settings -> Generate Token).
-- `EVENT_REGION`, `VIQRC_SEASON_ID`, `V5RC_SEASON_ID` -- same settings as
-  the desktop app's Settings view.
-- `TEAMS` -- `number:program:grade` triplets, comma-separated, e.g.
-  `"1234A:V5RC:HS,5678B:VIQRC:MS"`. Any number of teams is supported.
+- `DASHBOARD_URL` -- base URL of your [club-dashboard-web](../club-dashboard-web)
+  deployment (no trailing slash), reachable from the Fruit Jam's WiFi network.
+- `DASHBOARD_API_KEY` -- the raw static API key club-dashboard-web was
+  configured with (matches the `API_KEY_SHA256` hash in that project's
+  `.env` -- pass the raw value here, not the hash).
+- `EVENT_REGION` -- **display-only**: labels the World Skills view's
+  regional-rank column (e.g. "Michigan Rk"). It no longer filters or
+  selects any data -- team roster, season ids, and region are entirely
+  controlled by club-dashboard-web's own Settings page now. Keep this in
+  sync by hand if you want the label to stay accurate.
 - `TZ_OFFSET_HOURS` -- CircuitPython has no timezone database, so "today"
   (for the Active Today view) is computed from a fixed UTC offset.
 - Everything else (refresh interval, scroll speed, display resolution)
@@ -79,9 +85,7 @@ code.py              Entry point: boot sequence + main loop
 config.py            settings.toml -> validated Config object
 hardware.py          picodvi display, button, and SD card setup
 vex_wifi.py          ESP32-C6 WiFi bring-up, HTTP session, NTP time sync
-vex_data.py          Fetches + shapes data for the three dashboards
 vex_cache.py          SD card cache for once-a-day World Skills/Awards data
-json_stream.py        Streaming JSON parser (see "World Skills memory use" below)
 dashboard_ui.py       Screen shell: header, fixed column-header bar, footer, scroll area
 ui_theme.py           Color palette
 ui_widgets.py         Label/rect helpers + the auto-scroll engine
@@ -89,20 +93,10 @@ view_active.py         Active Today table renderer
 view_world_skills.py   World Skills table renderer
 view_awards.py         Awards table renderer
 settings.toml.example  Configuration template -- copy to settings.toml and fill in
-lib/                  Vendored third-party CircuitPython libraries
+lib/                  Vendored third-party libraries, plus dashboard_client.py
+                       (in-house client for club-dashboard-web's external API)
 sd/                   Reserved for SD card contents
 ```
-
-## World Skills memory use
-
-The world skills rankings endpoint is unauthenticated, unpaginated, and
-returns *every* team in a season/grade level in one response -- several
-megabytes of JSON for a busy grade level. That's too large to decode into
-one big list of dicts on a microcontroller alongside everything else the
-board is holding in RAM. `vex_data.py` streams that response through
-`json_stream.py` and keeps only the rows for your tracked teams as they
-arrive, computing each one's regional rank from a running counter in the
-same pass, rather than ever materializing the full list.
 
 ## Once-a-day caching
 
@@ -117,15 +111,20 @@ time it was fetched; switching to that view again the same day -- even
 after a reboot -- reuses that copy instead of hitting the network again.
 Without an SD card, this still works within a single boot (kept in
 memory), it just can't survive a reboot, so it refetches once after
-power-up.
+power-up. Note that "fresh" here only means fresh according to this
+device's own fetch -- club-dashboard-web has its own separate cache
+(see "Status bar shows 'No data yet'" below), and this device has no way
+to force a refresh on that side.
 
 ## Libraries
 
 `lib/` vendors everything this project depends on, each under its
-original MIT license (see the SPDX header at the top of each file):
+original MIT license (see the SPDX header at the top of each file),
+plus one in-house module:
 
-- [`cpvexevents`](https://github.com/ksbarnt/cpvexevents) -- the VEX
-  Events API client this dashboard is built on.
+- `dashboard_client.py` -- this project's own client for
+  club-dashboard-web's `/api/external/*` cached-data API (not vendored
+  third-party code).
 - `adafruit_esp32spi`, `adafruit_bus_device` -- ESP32-C6 co-processor
   WiFi driver.
 - `adafruit_connection_manager`, `adafruit_requests` -- HTTP on top of
@@ -141,16 +140,24 @@ original MIT license (see the SPDX header at the top of each file):
   720x400) and that the monitor supports that resolution over DVI/HDMI.
 - **"Dashboard configuration error" screen**: the message names the
   missing/invalid `settings.toml` key -- fix it and save again.
-- **Status bar shows a VEX API error**: double check `VEX_API_TOKEN` and
-  that `VIQRC_SEASON_ID`/`V5RC_SEASON_ID` are real season ids for the
-  program(s) you're tracking.
+- **Status bar shows a Dashboard API error**: check `DASHBOARD_URL` is
+  reachable from the Fruit Jam's WiFi network and that `DASHBOARD_API_KEY`
+  matches a key club-dashboard-web recognizes -- a 401 means a bad or
+  missing key.
+- **Status bar shows "No data yet"**: club-dashboard-web hasn't cached
+  that view yet (nobody has loaded its dashboard page in a browser to
+  populate it) -- open club-dashboard-web's site once to populate it.
 - **A team never shows up**: the status bar surfaces "number not found"
-  warnings -- check the team number and program in `TEAMS` match what
-  events.vex.com has on record.
+  warnings passed through from club-dashboard-web -- check the team
+  roster on club-dashboard-web's own Settings page, not anything local
+  to this device.
 - **World Skills/Awards look stale**: they only refetch once per local
   calendar day (see "Once-a-day caching"). Delete
   `/sd/world_skills_cache.json` / `/sd/awards_cache.json` from the SD
-  card (or just switch views on a new day) to force a refetch.
+  card (or just switch views on a new day) to force a refetch -- though
+  note this only forces *this device* to refetch from club-dashboard-web;
+  if club-dashboard-web's own cache is what's stale, see "Status bar
+  shows 'No data yet'" above.
 - Serial console output (`code.py`'s `print()` calls) is visible over USB
   in a serial terminal or the Mu editor's REPL if you need more detail
   than the on-screen status bar shows.

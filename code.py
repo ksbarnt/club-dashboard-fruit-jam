@@ -15,12 +15,11 @@ import time
 
 import ui_theme
 import vex_cache
-import vex_data
 import view_active
 import view_awards
 import view_world_skills
 from config import Config, ConfigError
-from cpvexevents import VexEventsClient, VexEventsError
+from dashboard_client import DashboardClient, DashboardError, DashboardNotAvailableError
 from dashboard_ui import VIEWS, DashboardUI
 from hardware import Buttons, init_display, mount_sd_card
 from vex_wifi import build_session, connect_wifi, sync_time
@@ -102,9 +101,7 @@ def main():
         print("NTP sync failed, continuing with board clock:", exc)
     last_time_sync = time.monotonic()
 
-    client = VexEventsClient(session, token=config.api_token)
-    data = vex_data.VexData(client, session)
-    season_ids = {"VIQRC": config.viqrc_season_id, "V5RC": config.v5rc_season_id}
+    client = DashboardClient(session, config.dashboard_url, config.dashboard_api_key)
 
     buttons = Buttons()
     current_view = "active"
@@ -143,24 +140,23 @@ def main():
         try:
             if view == "active":
                 ensure_wifi()
-                start, end = vex_data.today_bounds(time.localtime())
-                result = data.fetch_active_teams(config.teams, start, end)
+                result = client.get_active_teams()
                 ui.render(lambda g: view_active.build(g, result, ui.font, ui.width))
             elif view == "world_skills":
-                result = get_daily(
-                    "world_skills",
-                    lambda: data.fetch_world_skills(config.teams, config.event_region, season_ids),
-                )
+                result = get_daily("world_skills", client.get_world_skills)
                 ui.render(lambda g: view_world_skills.build(g, result, ui.font, ui.width))
             else:
-                result = get_daily("awards", lambda: data.fetch_awards(config.teams, season_ids))
+                result = get_daily("awards", client.get_awards)
                 ui.render(lambda g: view_awards.build(g, result, ui.font, ui.width))
 
             warnings = result.get("warnings") or []
             ui.set_status(warnings[0] if warnings else "")
-        except VexEventsError as exc:
-            print("VEX Events API error refreshing %s: %s" % (view, exc))
-            ui.set_status("VEX API error: %s" % exc)
+        except DashboardNotAvailableError:
+            print("No cached data yet for %s" % view)
+            ui.set_status("No data yet -- open the dashboard site once to populate it")
+        except DashboardError as exc:
+            print("Dashboard API error refreshing %s: %s" % (view, exc))
+            ui.set_status("Dashboard API error: %s" % exc)
         except Exception as exc:  # noqa: BLE001 - keep the dashboard alive on any fetch failure
             print("Error refreshing %s: %s" % (view, exc))
             ui.set_status("Error: %s" % exc)

@@ -5,39 +5,28 @@
 # board (or save it again from the CIRCUITPY drive, which triggers a
 # reload). Copy this file to settings.toml and replace every placeholder
 # value below before use -- settings.toml itself is gitignored since it
-# holds your WiFi password and API token.
+# holds your WiFi password and API key.
 
 # --- WiFi ---
 # The Fruit Jam's ESP32-C6 co-processor joins this network at boot.
 CIRCUITPY_WIFI_SSID = "your-wifi-ssid"
 CIRCUITPY_WIFI_PASSWORD = "your-wifi-password"
 
-# --- VEX Events API ---
-# A bearer token (JWT) from your events.vex.com account: My Account ->
-# Developer / API Settings -> Generate Token.
-VEX_API_TOKEN = "your-vex-events-api-token"
+# --- Club Dashboard Web ---
+# Base URL (no trailing slash) of your club-dashboard-web deployment, and
+# the raw static API key configured there (the same key whose SHA-256
+# hash is stored as API_KEY_SHA256 in that project's .env -- pass the
+# raw value here, not the hash).
+DASHBOARD_URL = "http://192.168.1.50:5000"
+DASHBOARD_API_KEY = "your-dashboard-api-key"
 
-# --- Club settings (mirrors the desktop app's Settings view) ---
-
-# The event region used for the World Skills dashboard's regional
-# ranking column. Must exactly match one of the regions events.vex.com
-# uses, e.g. "Texas - Region 1", "California - North", "Ontario",
-# "United Kingdom". See the desktop app's Settings view for the full list.
+# --- Local display label ---
+# Cosmetic only: the World Skills view's regional-rank column header
+# (e.g. "Michigan Rk"). Does NOT filter or influence which data is
+# fetched -- that's controlled entirely by club-dashboard-web's own
+# Settings page. Keep this in sync by hand with whatever region
+# club-dashboard-web is actually configured for.
 EVENT_REGION = "Texas - Region 1"
-
-# Season ids from events.vex.com for each program (find them via the
-# desktop app's Settings view, or GET /seasons?program=VIQRC|V5RC on the
-# API). Leave a program at 0 if you have no teams in that program -- at
-# least one of the two must be set.
-VIQRC_SEASON_ID = 0
-V5RC_SEASON_ID = 0
-
-# Teams to track, as comma-separated "number:program:grade" triplets.
-#   program is VIQRC or V5RC.
-#   grade is ES or MS for VIQRC, MS or HS for V5RC.
-# There's no limit on how many teams you list here.
-# Example: "1234A:V5RC:HS,5678B:VIQRC:MS,9012C:VIQRC:ES"
-TEAMS = "1234A:V5RC:HS,5678B:VIQRC:MS"
 
 # --- Local time ---
 # CircuitPython has no timezone database, so the dashboard's "today" (for
