@@ -34,9 +34,10 @@ Active Today refreshes automatically every `REFRESH_INTERVAL_SECONDS` (5
 minutes by default). World Skills and Awards are refetched at most once
 per local calendar day instead -- see "Once-a-day caching" below --
 checked whenever you switch to either view. Tables taller than the
-screen scroll slowly on their own (one line every `SCROLL_DELAY_SECONDS`
-by default), pausing `SCROLL_PAUSE_SECONDS` at the top and bottom of
-each pass; column headers stay fixed while only the table body scrolls.
+screen page through their rows automatically, holding each page for
+`PAGE_PAUSE_SECONDS` (8 seconds by default) before advancing to the
+next and looping back to the first page after the last; column headers
+stay fixed while only the table body paginates.
 
 ## Install
 
@@ -75,7 +76,7 @@ reference. In short:
   sync by hand if you want the label to stay accurate.
 - `TZ_OFFSET_HOURS` -- CircuitPython has no timezone database, so "today"
   (for the Active Today view) is computed from a fixed UTC offset.
-- Everything else (refresh interval, scroll speed, display resolution)
+- Everything else (refresh interval, page dwell time, display resolution)
   has a sensible default and rarely needs changing.
 
 ## Project layout
@@ -86,9 +87,10 @@ config.py            settings.toml -> validated Config object
 hardware.py          picodvi display, button, and SD card setup
 vex_wifi.py          ESP32-C6 WiFi bring-up, HTTP session, NTP time sync
 vex_cache.py          SD card cache for once-a-day World Skills/Awards data
-dashboard_ui.py       Screen shell: header, fixed column-header bar, footer, scroll area
+dashboard_ui.py       Screen shell: header, fixed column-header bar, footer, page area
 ui_theme.py           Color palette
-ui_widgets.py         Label/rect helpers + the auto-scroll engine
+ui_widgets.py         Label/rect helpers + the page-advance engine
+ui_pagination.py       Shared header+rows pagination helper (Active Today, World Skills)
 view_active.py         Active Today table renderer
 view_world_skills.py   World Skills table renderer
 view_awards.py         Awards table renderer

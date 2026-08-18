@@ -6,8 +6,9 @@ today's Active Teams, Button 2 shows World Skills, Button 3 shows Awards.
 Active Today refreshes automatically every REFRESH_INTERVAL_SECONDS;
 World Skills and Awards are refetched at most once per local calendar day
 (see get_daily()/vex_cache.py), checked whenever their view is selected.
-Tables taller than the screen scroll slowly on their own, column headers
-staying fixed. All configuration lives in settings.toml -- see README.md.
+Tables taller than the screen page through their rows automatically,
+column headers staying fixed. All configuration lives in settings.toml
+-- see README.md.
 """
 
 import gc
@@ -141,13 +142,13 @@ def main():
             if view == "active":
                 ensure_wifi()
                 result = client.get_active_teams()
-                ui.render(lambda g: view_active.build(g, result, ui.font, ui.width))
+                ui.render(view_active.build(result, ui.font, ui.width, ui.viewport_height))
             elif view == "world_skills":
                 result = get_daily("world_skills", client.get_world_skills)
-                ui.render(lambda g: view_world_skills.build(g, result, ui.font, ui.width))
+                ui.render(view_world_skills.build(result, ui.font, ui.width, ui.viewport_height))
             else:
                 result = get_daily("awards", client.get_awards)
-                ui.render(lambda g: view_awards.build(g, result, ui.font, ui.width))
+                ui.render(view_awards.build(result, ui.font, ui.width, ui.viewport_height))
 
             warnings = result.get("warnings") or []
             ui.set_status(warnings[0] if warnings else "")

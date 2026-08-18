@@ -5,6 +5,7 @@ regional rank -- mirrors the desktop app's World Skills Dashboard.
 """
 
 import ui_theme
+from ui_pagination import SectionPager
 from ui_widgets import fit_text, font_row_height, make_label, make_rect
 
 # ("#", 70) is fixed; the regional-rank column's label is filled in at
@@ -45,18 +46,20 @@ def build_header(group, font, width, event_region):
         x += col_w
 
 
-def build(group, data, font, width):
+def build(data, font, width, viewport_height):
     row_h = font_row_height(font)
-    y = 0
+    pager = SectionPager(viewport_height)
 
     for grp in data.get("groups") or []:
         program = grp["program"]
         accent = ui_theme.PROGRAM_ACCENT.get(program, ui_theme.TEXT_PRIMARY)
         title = _GROUP_TITLES.get((program, grp["grade"]), "%s - %s" % (program, grp["grade"]))
 
-        group.append(make_rect(width, row_h, ui_theme.GROUP_HEADER_BG, 0, y))
-        group.append(make_label(font, title, accent, 10, y + row_h // 2))
-        y += row_h
+        def draw_group_header(group, y, title=title, accent=accent):
+            group.append(make_rect(width, row_h, ui_theme.GROUP_HEADER_BG, 0, y))
+            group.append(make_label(font, title, accent, 10, y + row_h // 2))
+
+        pager.set_header(0, draw_group_header, row_h)
 
         for team in grp.get("teams") or []:
             cells = [
@@ -67,23 +70,28 @@ def build(group, data, font, width):
                 "--" if team.get("driverScore") is None else str(team["driverScore"]),
                 "--" if team.get("autoScore") is None else str(team["autoScore"]),
             ]
-            x = 10
-            for i, ((_label, col_w), value) in enumerate(zip(_COLUMNS, cells)):
-                color = accent if i == 0 else ui_theme.TEXT_PRIMARY
-                group.append(make_label(font, value, color, x, y + row_h // 2))
-                x += col_w
-            y += row_h
 
-    if y == 0:
-        group.append(
-            make_label(
-                font,
-                "No world skills rankings found for the tracked teams.",
-                ui_theme.TEXT_MUTED,
-                10,
-                row_h,
-            )
+            def draw_team_row(group, y, cells=cells, accent=accent):
+                x = 10
+                for i, ((_label, col_w), value) in enumerate(zip(_COLUMNS, cells)):
+                    color = accent if i == 0 else ui_theme.TEXT_PRIMARY
+                    group.append(make_label(font, value, color, x, y + row_h // 2))
+                    x += col_w
+
+            pager.add_row(draw_team_row, row_h)
+
+    if not pager.has_content():
+        pager.add_row(
+            lambda g, y: g.append(
+                make_label(
+                    font,
+                    "No world skills rankings found for the tracked teams.",
+                    ui_theme.TEXT_MUTED,
+                    10,
+                    y + row_h // 2,
+                )
+            ),
+            row_h,
         )
-        y = row_h * 2
 
-    return y
+    return pager.pages()

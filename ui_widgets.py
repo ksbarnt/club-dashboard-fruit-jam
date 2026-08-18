@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Low-level displayio building blocks shared by the three dashboard views:
 solid-color rects, positioned labels, column-width text fitting, and the
-auto-scroll engine used whenever a table is taller than its viewport.
+page-advance engine used whenever a table is taller than its viewport.
 """
 
 import time
@@ -52,66 +52,46 @@ def fit_text(text, font, max_width_px):
     return text[: max_chars - 3] + "..."
 
 
-class ScrollArea(object):
-    """A displayio Group that auto-scrolls its contents vertically when
-    they're taller than the viewport: pause at the top, scroll down slowly,
-    pause at the bottom, then loop back to the top (rather than scrolling
-    back up) and repeat. No-ops (stays put) when everything already fits.
+class PageArea(object):
+    """A displayio Group that shows one pre-built "page" of content at a
+    time, advancing to the next on a timer and looping back to the first
+    after the last -- discrete auto-advancing pages, replacing continuous
+    auto-scroll. Purely a display engine: it has no concept of rows,
+    headers, or sections -- each page handed to set_pages() must already
+    be a self-contained draw closure guaranteed by its caller to fit
+    within viewport_height. A single page is shown indefinitely without
+    ever advancing (mirrors the previous scroll engine's no-op when
+    content already fits).
     """
 
-    def __init__(self, x, y, viewport_height, step=1, delay=0.04, pause=2.0):
+    def __init__(self, x, y, viewport_height, pause=6.0):
         self.group = displayio.Group(x=x, y=y)
-        self._origin_y = y
         self.viewport_height = viewport_height
-        self._step = max(1, int(step))
-        self._delay = delay
-        self._pause = pause
-        self._content_height = 0
-        self._offset = 0
-        self._pause_until = None
-        self._last_tick = time.monotonic()
+        self._pause = max(0.5, pause)
+        self._pages = [lambda g: None]
+        self._index = 0
+        self._page_until = None
 
-    def set_content(self, build):
-        """Clear this area and repopulate it.
+    def set_pages(self, pages):
+        """``pages``: a list of ``draw(parent_group)`` closures, each
+        already laid out to fit within viewport_height. Replaces current
+        content, resets to page 0, restarts the dwell timer."""
+        self._pages = pages or [lambda g: None]
+        self._index = 0
+        self._show_page(self._index)
+        self._page_until = time.monotonic() + self._pause
 
-        ``build(parent_group)`` should append this view's rows to
-        ``parent_group`` and return the total content height in pixels.
-        """
+    def _show_page(self, index):
         while len(self.group) > 0:
             self.group.pop()
-        self._content_height = build(self.group)
-        self._offset = 0
-        self.group.y = self._origin_y
-        now = time.monotonic()
-        self._pause_until = now + self._pause
-        self._last_tick = now
+        self._pages[index](self.group)
 
     def tick(self):
-        max_scroll = self._content_height - self.viewport_height
-        if max_scroll <= 0:
-            if self.group.y != self._origin_y:
-                self.group.y = self._origin_y
+        if len(self._pages) <= 1:
             return
-
         now = time.monotonic()
-        if self._pause_until is not None:
-            if now < self._pause_until:
-                return
-            self._pause_until = None
-            self._last_tick = now
-            if self._offset >= max_scroll:
-                # The bottom-of-pass pause just ended -- loop back to the
-                # top and pause there too, rather than scrolling back up.
-                self._offset = 0
-                self.group.y = self._origin_y
-                self._pause_until = now + self._pause
+        if self._page_until is None or now < self._page_until:
             return
-        if now - self._last_tick < self._delay:
-            return
-        self._last_tick = now
-
-        self._offset += self._step
-        if self._offset >= max_scroll:
-            self._offset = max_scroll
-            self._pause_until = now + self._pause
-        self.group.y = self._origin_y - self._offset
+        self._index = (self._index + 1) % len(self._pages)
+        self._show_page(self._index)
+        self._page_until = now + self._pause

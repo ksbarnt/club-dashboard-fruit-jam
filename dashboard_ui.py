@@ -1,15 +1,15 @@
 # SPDX-License-Identifier: MIT
 """The dashboard's fixed screen shell: background, header (title + clock),
 a fixed column-header bar, footer (view legend + status line), and the
-auto-scrolling content area the three views render into. Only that last
-area scrolls -- column headers stay put via ``set_table_header()``.
+paginated content area the three views render into. Only that last area
+paginates -- column headers stay put via ``set_table_header()``.
 """
 
 import displayio
 import terminalio
 
 import ui_theme
-from ui_widgets import ScrollArea, font_char_width, font_row_height, make_label, make_rect
+from ui_widgets import PageArea, font_char_width, font_row_height, make_label, make_rect
 
 VIEWS = ("active", "world_skills", "awards")
 VIEW_TITLES = {
@@ -47,19 +47,13 @@ class DashboardUI(object):
         self.root = displayio.Group()
         self.root.append(make_rect(self.width, self.height, ui_theme.SURFACE))
 
-        # Steps SCROLL_STEP_LINES worth of table rows every scroll_delay
-        # seconds -- the pixel step is computed here (not in config.py)
-        # since only this layer knows the actual on-screen row height.
-        step_px = max(1, config.scroll_step_lines) * self.row_height
-        self.scroll = ScrollArea(
+        self.pager = PageArea(
             0,
             self.header_height + self.table_header_height,
             self.viewport_height,
-            step=step_px,
-            delay=config.scroll_delay,
-            pause=config.scroll_pause,
+            pause=config.page_pause_seconds,
         )
-        self.root.append(self.scroll.group)
+        self.root.append(self.pager.group)
 
         self.nav_labels = {}
         self._build_header()
@@ -134,11 +128,12 @@ class DashboardUI(object):
             group.pop()
         build_header(group)
 
-    def render(self, build_content):
-        """``build_content(parent_group) -> content_height_px``. Only this
-        (the table body) scrolls -- column headers live in the fixed bar
-        set via ``set_table_header()``."""
-        self.scroll.set_content(build_content)
+    def render(self, pages):
+        """``pages`` is a list of ``draw(parent_group)`` closures, one per
+        page, each already sized to fit within ``viewport_height`` by the
+        calling view. Only this (the table body) paginates -- column
+        headers live in the fixed bar set via ``set_table_header()``."""
+        self.pager.set_pages(pages)
 
     def tick(self):
-        self.scroll.tick()
+        self.pager.tick()
