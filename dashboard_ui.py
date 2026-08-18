@@ -94,7 +94,7 @@ class DashboardUI(object):
         self.root.append(self.table_header_group)
 
     def _build_footer(self):
-        group = displayio.Group()
+        group = displayio.Group(x=0, y=self.height - self.footer_height)
         group.append(make_rect(self.width, self.footer_height, ui_theme.FOOTER_BG))
         char_w = font_char_width(self.font)
         x = 10

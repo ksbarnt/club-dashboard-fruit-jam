@@ -93,8 +93,9 @@ view_active.py         Active Today table renderer
 view_world_skills.py   World Skills table renderer
 view_awards.py         Awards table renderer
 settings.toml.example  Configuration template -- copy to settings.toml and fill in
-lib/                  Vendored third-party libraries, plus dashboard_client.py
+lib/                  Vendored third-party libraries, plus dashboard_client.mpy
                        (in-house client for club-dashboard-web's external API)
+                       -- everything here is pre-compiled to .mpy bytecode
 sd/                   Reserved for SD card contents
 ```
 
@@ -119,10 +120,13 @@ to force a refresh on that side.
 ## Libraries
 
 `lib/` vendors everything this project depends on, each under its
-original MIT license (see the SPDX header at the top of each file),
-plus one in-house module:
+original MIT license, plus one in-house module. Every file in `lib/`
+is shipped pre-compiled to `.mpy` bytecode (built with `mpy-cross` from
+the matching CircuitPython release) rather than as `.py` source, to
+save flash space and speed up import at boot; the original MIT-licensed
+`.py` sources remain available from each library's upstream repo:
 
-- `dashboard_client.py` -- this project's own client for
+- `dashboard_client.mpy` -- this project's own client for
   club-dashboard-web's `/api/external/*` cached-data API (not vendored
   third-party code).
 - `adafruit_esp32spi`, `adafruit_bus_device` -- ESP32-C6 co-processor
@@ -165,5 +169,6 @@ plus one in-house module:
 ## License
 
 This project is licensed under the [MIT License](LICENSE). The vendored
-libraries in `lib/` keep their own original MIT licenses (see the SPDX
-header at the top of each file).
+libraries in `lib/` keep their own original MIT licenses -- see the
+SPDX header at the top of each library's upstream `.py` source (the
+compiled `.mpy` files shipped here don't carry the header text).

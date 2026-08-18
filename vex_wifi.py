@@ -48,7 +48,7 @@ def connect_wifi(ssid, password, esp=None, max_attempts=10, retry_delay=2):
 
 
 def build_session(esp):
-    """Build an ``adafruit_requests.Session`` (for ``VexEventsClient``) from a connected ESP."""
+    """Build an ``adafruit_requests.Session`` (for ``DashboardClient``) from a connected ESP."""
     pool = adafruit_connection_manager.get_radio_socketpool(esp)
     ssl_context = adafruit_connection_manager.get_radio_ssl_context(esp)
     return adafruit_requests.Session(pool, ssl_context)
