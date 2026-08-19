@@ -22,10 +22,11 @@ import view_world_skills
 from config import Config, ConfigError
 from dashboard_client import DashboardClient, DashboardError, DashboardNotAvailableError
 from dashboard_ui import VIEWS, DashboardUI
-from hardware import Buttons, init_display, mount_sd_card
+from hardware import Buttons, StatusPixels, init_display, mount_sd_card
 from vex_wifi import build_session, connect_wifi, sync_time
 
 TIME_SYNC_INTERVAL = 3600
+WIFI_CHECK_INTERVAL = 5
 BUTTON_DEBOUNCE_SECONDS = 0.25
 
 
@@ -74,6 +75,7 @@ def main():
     display = init_display(config.display_width, config.display_height)
     mount_sd_card()  # optional -- world_skills/awards just won't persist without a card
     ui = DashboardUI(display, config)
+    pixels = StatusPixels()
 
     def set_view_header(view):
         """Column labels for the fixed header bar -- separate from
@@ -93,6 +95,7 @@ def main():
     ui.set_status("Connecting to WiFi...")
 
     esp = connect_wifi(config.wifi_ssid, config.wifi_password)
+    pixels.set_wifi(True)
     session = build_session(esp)
 
     ui.set_status("Syncing clock...")
@@ -114,8 +117,10 @@ def main():
 
     def ensure_wifi():
         if not esp.is_connected:
+            pixels.set_wifi(False)
             ui.set_status("WiFi dropped, reconnecting...")
             connect_wifi(config.wifi_ssid, config.wifi_password, esp=esp)
+            pixels.set_wifi(True)
 
     def get_daily(key, fetch_fn):
         """Fetch result for a once-a-day dataset (world_skills/awards):
@@ -138,6 +143,7 @@ def main():
 
     def refresh_view(view):
         ui.set_status("Loading %s..." % view.replace("_", " "))
+        pixels.set_updating(True)
         try:
             if view == "active":
                 ensure_wifi()
@@ -152,15 +158,19 @@ def main():
 
             warnings = result.get("warnings") or []
             ui.set_status(warnings[0] if warnings else "")
+            pixels.set_dashboard(VIEWS.index(view), True)
         except DashboardNotAvailableError:
             print("No cached data yet for %s" % view)
             ui.set_status("No data yet -- open the dashboard site once to populate it")
+            pixels.set_dashboard(VIEWS.index(view), False)
         except DashboardError as exc:
             print("Dashboard API error refreshing %s: %s" % (view, exc))
             ui.set_status("Dashboard API error: %s" % exc)
         except Exception as exc:  # noqa: BLE001 - keep the dashboard alive on any fetch failure
             print("Error refreshing %s: %s" % (view, exc))
             ui.set_status("Error: %s" % exc)
+        finally:
+            pixels.set_updating(False)
         last_refresh[view] = time.monotonic()
         gc.collect()
 
@@ -170,6 +180,7 @@ def main():
 
     last_button_states = [False, False, False]
     last_press_time = [0.0, 0.0, 0.0]
+    last_wifi_check = time.monotonic()
     while True:
         now = time.monotonic()
 
@@ -190,6 +201,10 @@ def main():
         # when the user switches back to that view (button press, above).
         if current_view == "active" and now - last_refresh[current_view] >= config.refresh_interval:
             refresh_view(current_view)
+
+        if now - last_wifi_check >= WIFI_CHECK_INTERVAL:
+            pixels.set_wifi(esp.is_connected)
+            last_wifi_check = now
 
         if now - last_time_sync >= TIME_SYNC_INTERVAL:
             try:

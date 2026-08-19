@@ -39,6 +39,23 @@ screen page through their rows automatically, holding each page for
 next and looping back to the first page after the last; column headers
 stay fixed while only the table body paginates.
 
+## Status LEDs
+
+The Fruit Jam's 5 onboard NeoPixels double as an at-a-glance status
+strip, left to right:
+
+| Pixel | Meaning |
+|---|---|
+| 1 | Blue while WiFi is connected, off otherwise. |
+| 2 | Yellow while a dashboard fetch is in progress, off otherwise. |
+| 3 | Active Today: green if the last fetch found cached data on club-dashboard-web, red if it doesn't have any cached yet, off if not checked yet this boot. |
+| 4 | World Skills: same green/red/off meaning as pixel 3. |
+| 5 | Awards: same green/red/off meaning as pixel 3. |
+
+Red mirrors the on-screen "No data yet" status (see "Status bar shows
+'No data yet'" below) -- it means club-dashboard-web itself has no
+cached data for that view yet, not a problem with this device.
+
 ## Install
 
 1. Install **CircuitPython 10.x** on the Fruit Jam:
@@ -138,6 +155,8 @@ save flash space and speed up import at boot; the original MIT-licensed
 - `adafruit_ntp` -- clock sync.
 - `adafruit_display_text` -- on-screen text labels.
 - `adafruit_sdcard` -- SD card driver, for World Skills/Awards caching.
+- `neopixel`, `adafruit_pixelbuf` -- drives the onboard status LEDs (see
+  "Status LEDs" above).
 
 ## Troubleshooting
 

@@ -5,6 +5,7 @@ import board
 import busio
 import displayio
 import framebufferio
+import neopixel
 import picodvi
 import storage
 import supervisor
@@ -77,3 +78,40 @@ class Buttons(object):
     def pressed(self):
         """[bool, bool, bool] -- True where button N (1-indexed) is currently held."""
         return [not pin.value for pin in self._pins]
+
+
+class StatusPixels(object):
+    """The Fruit Jam's 5 onboard NeoPixels, used as a status strip:
+
+    [0] WiFi connected, [1] a dashboard fetch is in progress, [2:5] each
+    dashboard view's cached-data status (in dashboard_ui.VIEWS order).
+    """
+
+    OFF = (0, 0, 0)
+    WIFI = (0, 0, 255)
+    UPDATING = (255, 170, 0)
+    GOOD = (0, 255, 0)
+    STALE = (255, 0, 0)
+
+    def __init__(self, brightness=0.2):
+        self._pixels = neopixel.NeoPixel(
+            board.NEOPIXEL, 5, brightness=brightness, auto_write=True
+        )
+        self._pixels.fill(self.OFF)
+
+    def set_wifi(self, connected):
+        self._pixels[0] = self.WIFI if connected else self.OFF
+
+    def set_updating(self, updating):
+        self._pixels[1] = self.UPDATING if updating else self.OFF
+
+    def set_dashboard(self, index, available):
+        """``available``: True (good cached data, green), False (no
+        cache on the server yet, red), or None (not checked yet, off)."""
+        if available is None:
+            color = self.OFF
+        elif available:
+            color = self.GOOD
+        else:
+            color = self.STALE
+        self._pixels[2 + index] = color
